@@ -172,6 +172,7 @@ export class Runtime {
   private frameTimer: ReturnType<typeof setInterval> | null = null;
   private frameBusy = false;
   private frameErrors = 0;
+  private phoneFrame: Promise<Photo> | null = null; // a picture being taken for onFrame, with the phone as the glasses
   // When the person began to speak, worked out from the utterance's length,
   // and whether the frames are held on that moment for the handler.
   private spokenAt = 0;
@@ -571,7 +572,8 @@ export class Runtime {
 
   // ── the camera ─────────────────────────────────────────────────────────────
 
-  private async takePhoto(size: PhotoSize, mode: 'photo' | 'text'): Promise<Photo> {
+  // `forFrame`: a picture for onFrame. It stays out of the dashboard's conversation.
+  private async takePhoto(size: PhotoSize, mode: 'photo' | 'text', forFrame = false): Promise<Photo> {
     const link = this.device;
     if (!link) throw new Error('No device is connected, so there is no camera to use.');
     if (link.kind === 'glasses' && link.glasses && !link.glasses.connected) {
@@ -589,6 +591,11 @@ export class Runtime {
       this.keepPhoto(photo);
       return photo;
     }
+    // A phone camera takes one picture at a time, so wait for a frame in progress.
+    if (!forFrame && this.phoneFrame) {
+      await this.phoneFrame.catch(() => {});
+      if (!this.active) throw new StoppedError('Stopped');
+    }
     const requestId = `p${randomId()}`;
     const arrived = new Promise<Buffer>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -605,8 +612,10 @@ export class Runtime {
       this.pendingPhotos.delete(requestId);
       p?.reject(new Error(why));
     };
-    this.statusNote = 'Taking a photo';
-    this.pushState();
+    if (!forFrame) {
+      this.statusNote = 'Taking a photo';
+      this.pushState();
+    }
     void this.request((id) => ({ t: 'photo', id, requestId, uploadPath: PHOTO_UPLOAD_PATH, size, mode, transfer: config.photoTransfer }), PHOTO_TIMEOUT_MS + 5000).then(
       // The device says it was delivered. It is normally here already.
       () => void setTimeout(() => fail('The phone said the photo was sent, but it did not reach this laptop. Check the address the phone uses (PUBLIC_URL).'), 8000),
@@ -615,11 +624,13 @@ export class Runtime {
     try {
       const jpeg = await arrived;
       const photo = new PhotoImpl(jpeg, link.camera, randomId(6));
-      this.keepPhoto(photo);
+      if (!forFrame) this.keepPhoto(photo);
       return photo;
     } finally {
-      this.statusNote = '';
-      this.pushState();
+      if (!forFrame) {
+        this.statusNote = '';
+        this.pushState();
+      }
     }
   }
 
@@ -657,6 +668,8 @@ export class Runtime {
   // onFrame, about once a second, with the newest frame. A call that is still
   // running is left to finish, and that tick is skipped. It runs next to the
   // other handlers and does not count as busy, so speech is still heard.
+  // With the phone as the glasses there is no stream, so each frame is a photo
+  // from the phone camera, and the time a photo takes can lower the rate.
   private startFrames(): void {
     if (!this.app.onFrame || this.frameTimer) return;
     this.frameErrors = 0;
@@ -670,13 +683,29 @@ export class Runtime {
   }
 
   private tickFrame(): void {
+    if (this.device?.kind === 'simulator') return this.tickPhoneFrame();
     const newest = this.newestFrame;
     if (!this.active || this.frameBusy || !newest || !this.camera.streaming() || this.frames.stalled()) return;
+    this.deliverFrame(Promise.resolve(new PhotoImpl(newest.jpeg, 'glasses', randomId(6), newest.at)));
+  }
+
+  private tickPhoneFrame(): void {
+    // A photo the app asked for goes first: the phone camera takes one at a time.
+    if (!this.active || this.frameBusy || this.pendingPhotos.size) return;
+    const capture = this.takePhoto('low', 'photo', true);
+    this.phoneFrame = capture;
+    const done = (): void => {
+      if (this.phoneFrame === capture) this.phoneFrame = null;
+    };
+    capture.then(done, done);
+    this.deliverFrame(capture);
+  }
+
+  private deliverFrame(next: Promise<Photo>): void {
     const gen = this.gen;
     this.frameBusy = true;
-    const frame = new PhotoImpl(newest.jpeg, 'glasses', randomId(6), newest.at);
-    Promise.resolve()
-      .then(() => this.app.onFrame!(frame, this.g))
+    next
+      .then((frame) => (gen === this.gen ? this.app.onFrame!(frame, this.g) : undefined))
       .catch((e) => {
         if (gen !== this.gen || e instanceof StoppedError) return;
         // Once a second would flood the log when it keeps failing: the first few, then one a minute.

@@ -7,9 +7,9 @@
 // once: with the live camera, g.takePhoto() returns the newest picture
 // without waiting for the glasses.
 //
-// Needs the glasses on a Wi-Fi network that reaches the laptop, and ffmpeg
-// on the laptop. With the phone as the glasses, onFrame does not run, and the
-// button takes a photo with the phone camera.
+// The glasses need a Wi-Fi network that reaches the laptop, and ffmpeg on the
+// laptop. With the phone as the glasses, onFrame and the button use photos from
+// the phone camera, and neither is needed.
 //
 // Shows: camera: 'live', onFrame, pacing Gemini calls, g.takePhoto with the live camera
 

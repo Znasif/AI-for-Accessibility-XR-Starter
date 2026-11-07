@@ -20,6 +20,7 @@ import { CLOSE_BAD_TOKEN, DEVICE_WS_PATH, PHOTO_UPLOAD_PATH, type DownMessage, t
 import type { ProfileStore } from '../toolkit/profile.ts';
 import { audioSettings, describeSettings } from '../toolkit/settings.ts';
 import { checkNeedValue, EXAMPLE_PROFILES, NEEDS, SUPPORT_AREAS } from '../toolkit/needs.ts';
+import { activePerson, addPerson, hasPeopleFile, loadPeople, savePerson, selectPerson, syncActiveNeeds, type Person } from '../toolkit/people.ts';
 
 const WEB_DIR = join(import.meta.dir, 'web');
 
@@ -53,6 +54,22 @@ const json = (data: unknown, status = 200) => Response.json(data, { status });
 
 export function startServer(opts: { runtime: Runtime; store: ProfileStore; port: number; token: string }): Server<WsData> {
   const { runtime, store, port, token } = opts;
+
+  // The active person's needs are the profile. A change to the profile stays
+  // with them, except while a person or a trial example is being loaded.
+  let loading = false;
+  store.onChange((p) => {
+    if (!loading && hasPeopleFile()) syncActiveNeeds(p);
+  });
+  const loadInto = async (profile: { supportAreas: string[]; needs: Person['needs'] }, source: string): Promise<void> => {
+    loading = true;
+    try {
+      await store.replace(profile, source);
+    } finally {
+      loading = false;
+    }
+  };
+  if (hasPeopleFile()) void loadInto(activePerson(), 'person');
 
   const isLocal = (req: Request, server: Server<WsData>): boolean => {
     if (config.dashboardFromAnywhere) return true;
@@ -102,6 +119,7 @@ export function startServer(opts: { runtime: Runtime; store: ProfileStore; port:
       return jpeg ? new Response(jpeg, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' } }) : new Response('No frame', { status: 404 });
     }
     if (path === '/api/profile' && req.method === 'GET') return json(await profileView());
+    if (path === '/api/people' && req.method === 'GET') return json(loadPeople());
     if (req.method !== 'POST') return new Response('Not found', { status: 404 });
     // The dashboard's own script sends JSON here. Another web page open in
     // this browser would need a CORS permission, and this server does not give it.
@@ -131,8 +149,23 @@ export function startServer(opts: { runtime: Runtime; store: ProfileStore; port:
       case '/api/profile/example': {
         const ex = EXAMPLE_PROFILES.find((e) => e.key === body.key);
         if (!ex) return json({ ok: false, error: 'unknown example' }, 400);
-        await store.replace({ supportAreas: ex.supportAreas, needs: ex.needs });
+        await loadInto({ supportAreas: ex.supportAreas, needs: ex.needs }, 'example-profile');
         return json(await profileView());
+      }
+      case '/api/people/select': {
+        const person = selectPerson(String(body.id));
+        if (!person) return json({ ok: false, error: 'unknown person' }, 400);
+        await loadInto(person, 'person');
+        return json(loadPeople());
+      }
+      case '/api/people/save':
+        if (!savePerson(String(body.id), body)) return json({ ok: false, error: 'unknown person' }, 400);
+        return json({ ok: true });
+      case '/api/people/add': {
+        const person = addPerson(String(body.name ?? ''));
+        if (!person) return json({ ok: false, error: 'a name is needed' }, 400);
+        await loadInto(person, 'person');
+        return json(loadPeople());
       }
     }
     return new Response('Not found', { status: 404 });

@@ -226,6 +226,94 @@ function renderProfile(p) {
   tour.refresh();
 }
 
+// ── people: the active profile, and its prompts ─────────────────
+let people = null;
+const current = () => people?.people.find((p) => p.id === people.active);
+
+async function loadPeople() {
+  people = await fetch('/api/people').then((r) => r.json());
+  renderPeople();
+}
+
+function renderPeople() {
+  $('person').replaceChildren(...people.people.map((p) => new Option(p.name, p.id)));
+  $('person').value = people.active;
+  $('person-notes').value = current().notes ?? '';
+  renderFaq('entry');
+  renderFaq('continuous');
+}
+
+function saveFaq(field) {
+  const person = current();
+  return post('/api/people/save', { id: person.id, [field]: person[field] });
+}
+
+function renderFaq(field, focusAt) {
+  const person = current();
+  const rows = person[field].map((text, i) => {
+    const li = document.createElement('li');
+    const number = document.createElement('span');
+    number.textContent = `${i + 1}.`;
+    number.setAttribute('aria-hidden', 'true');
+    const input = document.createElement('textarea');
+    input.rows = 2;
+    input.value = text;
+    input.setAttribute('aria-label', `Prompt ${i + 1}`);
+    input.onchange = () => {
+      person[field][i] = input.value;
+      void saveFaq(field);
+    };
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.textContent = '↑';
+    up.disabled = i === 0;
+    up.setAttribute('aria-label', `Move prompt ${i + 1} up`);
+    up.onclick = () => {
+      [person[field][i - 1], person[field][i]] = [person[field][i], person[field][i - 1]];
+      void saveFaq(field);
+      renderFaq(field, i - 1);
+    };
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `Remove prompt ${i + 1}`);
+    remove.onclick = () => {
+      person[field].splice(i, 1);
+      void saveFaq(field);
+      renderFaq(field);
+    };
+    li.append(number, input, up, remove);
+    return li;
+  });
+  $(`faq-${field}`).replaceChildren(...rows);
+  if (focusAt != null) rows[focusAt]?.querySelector('textarea')?.focus();
+}
+
+for (const field of ['entry', 'continuous']) {
+  $(`add-${field}`).onclick = () => {
+    current()[field].push('');
+    renderFaq(field, current()[field].length - 1);
+  };
+}
+$('person').onchange = () =>
+  post('/api/people/select', { id: $('person').value }).then((r) => {
+    if (!r.people) return alert(r.error);
+    people = r;
+    renderPeople();
+    return loadProfile();
+  });
+$('person-add').onclick = () => {
+  const name = prompt('Name for the new profile');
+  if (!name) return;
+  post('/api/people/add', { name }).then((r) => {
+    if (!r.people) return alert(r.error);
+    people = r;
+    renderPeople();
+    return loadProfile();
+  });
+};
+$('person-notes').onchange = () => post('/api/people/save', { id: people.active, notes: $('person-notes').value });
+
 function saveNeed(key, value) {
   return post('/api/profile/need', { key, value }).then((r) => (r.needs ? renderProfile(r) : alert(r.error)));
 }
@@ -277,6 +365,7 @@ $('tour-btn').onclick = () => tour.start();
 listen();
 void loadConnect();
 void loadProfile();
+void loadPeople();
 setInterval(() => void loadConnect().catch(() => {}), 10_000);
 let seen = false;
 try {

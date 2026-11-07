@@ -129,7 +129,7 @@ export default defineApp({
 | Hear the person | `onSpeech(text, g) { ... }` |
 | Wait for the next answer | `const answer = await g.listen()` |
 | Take a photo | `const photo = await g.takePhoto()` |
-| See the view every second | `camera: 'live'` and `onFrame(frame, g) { ... }` (glasses on Wi-Fi) |
+| See the view every second | `camera: 'live'` and `onFrame(frame, g) { ... }` (glasses on Wi-Fi, or the phone camera) |
 | Ask Gemini | `await g.ai.ask('What is this?', { photo })` |
 | Chat, with memory | `await g.ai.chat(text)` |
 | Use the button | `onButton(button, g) { ... }`, where `button.press` is `'short'` or `'long'` |

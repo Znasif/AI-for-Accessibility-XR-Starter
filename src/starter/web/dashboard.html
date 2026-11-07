@@ -102,6 +102,17 @@
   .need label { font-weight: 600; }
   .need input[type=range] { width: 140px; vertical-align: middle; }
   .need select { min-height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .person { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; flex-wrap: wrap; }
+  .person label { font-weight: 600; }
+  .person select { flex: 1; min-width: 120px; min-height: 44px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; padding: 0 8px; }
+  .faq { padding: 10px 0; border-top: 1px solid var(--border); }
+  .faq h3 { margin: 0 0 6px; font-size: 15px; }
+  .faq ol { margin: 0 0 8px; padding: 0; list-style: none; }
+  .faq li { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .faq li > span { min-width: 1.4em; color: var(--muted); }
+  .faq li textarea { flex: 1; min-width: 0; min-height: 60px; resize: vertical; }
+  .faq li button { min-height: 40px; min-width: 40px; padding: 0 8px; }
+  .faq textarea { width: 100%; box-sizing: border-box; min-height: 110px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; padding: 8px; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--border); }
   .chips button { min-height: 36px; padding: 4px 12px; border-radius: 999px; font-weight: 500; font-size: 14px; }
   .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
@@ -178,7 +189,31 @@
 
     <section class="card" id="card-profile" aria-labelledby="h-profile">
       <div class="card-head"><h2 id="h-profile">Profile</h2><span class="small muted">AI for Accessibility Toolkit</span></div>
-      <div id="needs"></div>
+      <div class="person">
+        <label for="person">Active profile</label>
+        <select id="person"></select>
+        <button type="button" id="person-add">New profile</button>
+      </div>
+      <div class="faq">
+        <p class="small muted">Prompts go to the AI as written, for the active profile.</p>
+        <h3 id="h-entry">Prompts on entering a room, in order</h3>
+        <ol id="faq-entry" aria-labelledby="h-entry"></ol>
+        <button type="button" id="add-entry">Add a prompt</button>
+      </div>
+      <div class="faq">
+        <h3 id="h-continuous">Prompts while the app runs</h3>
+        <ol id="faq-continuous" aria-labelledby="h-continuous"></ol>
+        <button type="button" id="add-continuous">Add a prompt</button>
+      </div>
+      <div class="faq">
+        <h3><label for="person-notes">Notes</label></h3>
+        <p class="small muted">Stays on this laptop. Not sent to the AI.</p>
+        <textarea id="person-notes"></textarea>
+      </div>
+      <div class="faq">
+        <h3>Settings</h3>
+        <div id="needs"></div>
+      </div>
       <div class="chips" id="examples" role="group" aria-label="Example profiles"></div>
       <div class="switch" id="adapt-row">
         <span id="adapt-label">Adapt to the profile</span>

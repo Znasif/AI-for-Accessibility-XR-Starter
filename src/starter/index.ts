@@ -143,7 +143,7 @@ export interface AppDefinition {
    * g.takePhoto returns the newest picture at once. Needs the glasses on a
    * Wi-Fi network that reaches the laptop, and ffmpeg on the laptop. An app
    * with onFrame uses the live camera too. With the phone as the glasses,
-   * photos come from the phone camera as before.
+   * photos come from the phone camera, one at a time.
    */
   camera?: 'photos' | 'live';
   /** Start was pressed (on the phone or the dashboard). */
@@ -157,7 +157,10 @@ export interface AppDefinition {
    * in .env). A call that is still running is left to finish; the next
    * picture is skipped. It runs next to onSpeech and onButton. Gemini calls
    * from here count toward the spending guard: ask every few seconds, and
-   * compare answers before speaking. Not called with the phone as the glasses.
+   * compare answers before speaking. With the phone as the glasses, each
+   * picture is a photo from the phone camera, so it can arrive less often, and
+   * it needs no Wi-Fi to the laptop or ffmpeg. Frames stay off the dashboard's
+   * conversation. Pass one to g.ai as usual.
    */
   onFrame?(frame: Photo, g: Glasses): void | Promise<void>;
   /** Stop was pressed. g.say() is silent from now on. */

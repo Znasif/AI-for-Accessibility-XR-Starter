@@ -55,7 +55,7 @@ export default defineApp({
   async onStart(g) {},                  // Start pressed
   async onSpeech(text, g) {},           // the person said something (already transcribed)
   async onButton({ press }, g) {},      // glasses button: press is 'short' | 'long'
-  async onFrame(frame, g) {},           // live camera only: the newest picture, about once a second
+  async onFrame(frame, g) {},           // the newest picture, about once a second (glasses stream or phone camera)
   async onStop(g) {},                   // Stop pressed; g.say is silent now
   camera: 'photos',                     // or 'live': the glasses stream video (see The live camera)
 });
@@ -119,8 +119,11 @@ Accessibility XR project, where it ran with these glasses):
 - It needs the glasses on a Wi-Fi network that reaches the laptop (the
   tunnel does not carry video), and ffmpeg on the laptop. Without them the
   dashboard says so, and the app falls back to single photos.
-- With the phone as the glasses there is no stream: `onFrame` does not run,
-  and `g.takePhoto()` uses the phone camera.
+- With the phone as the glasses there is no stream. `onFrame` gets photos from
+  the phone camera, one at a time, so they can arrive less often than once a
+  second. This needs no Wi-Fi to the laptop and no ffmpeg. `g.takePhoto()` also
+  uses the phone camera, and takes its turn after a frame in progress.
+- Frames for `onFrame` do not appear in the dashboard's conversation.
 - The dashboard's glasses card shows the newest frame while it streams.
 
 ### The AI

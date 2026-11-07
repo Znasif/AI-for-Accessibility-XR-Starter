@@ -71,7 +71,6 @@ export const NEEDS: readonly NeedSpec[] = [
     ],
     default: 'standard',
     fromToolkit: false,
-    showOnDashboard: false,
   },
   {
     key: 'captions',
@@ -90,6 +89,56 @@ export const NEEDS: readonly NeedSpec[] = [
     default: false,
     fromToolkit: true,
     showOnDashboard: false,
+  },
+  {
+    key: 'orientationPlaybook',
+    label: 'Room briefing',
+    help: 'What the app reports in a room, and in what order.',
+    kind: 'choice',
+    options: [
+      { value: 'general', label: 'General' },
+      { value: 'perimeter', label: 'Perimeter walk' },
+      { value: 'layout', label: 'Room layout' },
+    ],
+    default: 'general',
+    fromToolkit: false,
+  },
+  {
+    key: 'directionStyle',
+    label: 'Directions',
+    help: 'How the app says where things are.',
+    kind: 'choice',
+    options: [
+      { value: 'relative', label: 'Left and right' },
+      { value: 'clock', label: "O'clock" },
+    ],
+    default: 'relative',
+    fromToolkit: false,
+  },
+  {
+    key: 'distanceStyle',
+    label: 'Sizes and distances',
+    help: 'Metres, or metres with a comparison to something familiar.',
+    kind: 'choice',
+    options: [
+      { value: 'metres', label: 'Metres' },
+      { value: 'metres-comparison', label: 'Metres and comparisons' },
+    ],
+    default: 'metres',
+    fromToolkit: false,
+  },
+  {
+    key: 'extraDetailSide',
+    label: 'More detail on',
+    help: 'A side to hear more about.',
+    kind: 'choice',
+    options: [
+      { value: 'none', label: 'Both sides equally' },
+      { value: 'left', label: 'The left' },
+      { value: 'right', label: 'The right' },
+    ],
+    default: 'none',
+    fromToolkit: false,
   },
 ];
 
